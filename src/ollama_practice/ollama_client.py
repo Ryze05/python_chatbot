@@ -8,17 +8,28 @@ class OllamaClient:
     client: OpenAI
     messages: list[ChatCompletionMessageParam]
     model: str
+    max_history: int
 
     def __init__(
         self,
         model: str,
         messages: list[ChatCompletionMessageParam],
+        max_history: int = 8,
         url: str = "http://localhost:11434/v1",
         api_key: str = "ollama",
     ) -> None:
         self.model = model
         self.client = OpenAI(base_url=url, api_key=api_key)
         self.messages = messages
+        self.max_history = max_history
+
+    def window_context(self):
+        if len(self.messages) <= self.max_history + 1:
+            return
+
+        system_msg = self.messages[0]
+        messages = self.messages[1:]
+        self.messages = [system_msg] + messages[-self.max_history:]
 
     def ask_ia(self, prompt: str) -> Iterator[str]:
         self.messages.append(
@@ -27,6 +38,9 @@ class OllamaClient:
                 "content": prompt
             }
         )
+
+        self.window_context()
+
         try:
             response_ai = self.client.chat.completions.create(
                 model=self.model,
