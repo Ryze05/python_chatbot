@@ -1,8 +1,51 @@
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
 from ollama_practice.ollama_client import OllamaClient
 from openai.types.chat import ChatCompletionMessageParam
 
 
+def showHelp(console: Console) -> None:
+    table = Table(
+        title="📌 Comandos Disponibles",
+        border_style="bold white",
+        show_lines=True
+    )
+
+    table.add_column("Comando", style="bold white", justify="left")
+    table.add_column("Descripción", style="bold white", justify="left")
+
+    table.add_row("/clear", "Limpia la memoria y reinicia la conversación")
+    table.add_row("/history", "Muestra el historial completo de la sesión")
+    table.add_row("/help", "Muestra este menú de ayuda")
+    table.add_row("exit", "Cierra el asistente y sale del programa")
+
+    console.print(table)
+
+
+def showBanner(console: Console) -> None:
+    text = Text.from_markup(
+        "🤖 [bold green]Asistente de Matemáticas[/bold green] 🤖\n"
+        "[dim]Escribe tu consulta o usa [bold blue]/help[/bold blue] "
+        "para ver los comandos.[/dim]"
+    )
+
+    text.justify = "center"
+
+    console.print(
+        Panel.fit(
+            text,
+            title="Ollama assistant",
+            border_style="bold white",
+        )
+    )
+
+
 def main() -> None:
+    console = Console()
+
     messages: list[ChatCompletionMessageParam] = [
         {
             "role": "system",
@@ -38,10 +81,7 @@ def main() -> None:
 
     client_ai = OllamaClient("llama3.2", messages)
 
-    print("═════════════════════════════════════════════")
-    print("       🤖 Asistente de Matemáticas 👨‍🏫        ")
-    print(" Comandos: /clear, /history, /help, exit")
-    print("═════════════════════════════════════════════\n")
+    showBanner(console)
 
     while True:
         try:
@@ -68,11 +108,7 @@ def main() -> None:
                 continue
 
             if user_input.strip() == "/help":
-                print("\n📎 Comandos disponibles:")
-                print("  /clear    -> Limpia y reinicia la memoria")
-                print("  /history  -> Muestra el historial de la sesión")
-                print("  /help     -> Muestra este menú de ayuda")
-                print("  exit      -> Cierra la aplicación\n")
+                showHelp(console)
                 continue
 
             print("\nChat:\n", end="", flush=True)
