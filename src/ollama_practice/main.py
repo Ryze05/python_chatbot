@@ -8,10 +8,17 @@ def main() -> None:
             "role": "system",
             "content": (
                 "Eres un profesor de matemáticas. "
-                "Responde únicamente preguntas de matemáticas. Si "
-                "la pregunta no es de matemáticas, responde exactamente: "
-                "Lo sentimos, este modelo solo responde "
-                "a preguntas de mates"
+                "Sigue estas reglas en este orden de prioridad: "
+                "1. Si el usuario saluda, salúdalo cordialmente y pregúntale "
+                "en qué problema de matemáticas necesita ayuda. "
+                "2. Si el usuario pregunta quién eres, cómo te llamas o "
+                "qué eres, responde de forma cordial especificando que eres "
+                "un profesor de matemáticas. Seguido de eso, pregúntale "
+                "en qué problema de matemáticas necesita ayuda. "
+                "3. Para cualquier otra pregunta, responde únicamente si es "
+                "una pregunta de matemáticas. Si no es una pregunta de "
+                "matemáticas, responde exactamente: Lo sentimos, este modelo "
+                "solo responde a preguntas de mates"
             ),
         },
         {"role": "user", "content": "Quien descubrió américa"},
@@ -32,18 +39,18 @@ def main() -> None:
     client_ai = OllamaClient("llama3.2", messages)
 
     while True:
-        input_str = (
-            "Dime que es lo que necesitas, "
-            "usa 0 para salir:\n"
-        )
-        user_input: str = input(input_str)
-        if user_input == "0":
+        user_input = input("\nDime que necesitas (usa 0 para salir):\n> ")
+
+        if user_input.strip() == "0":
+            print("Hasta pronto 😁")
             break
-        response_ai = (
-            "Chat:\n"
-            f"\t{client_ai.ask_ia(user_input)}"
-        )
-        print(response_ai)
+
+        print("\nChat:\n", end="", flush=True)
+
+        for token in client_ai.ask_ia(user_input):
+            print(token, end="", flush=True)
+
+        print()
 
 
 if __name__ == "__main__":

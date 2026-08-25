@@ -1,3 +1,5 @@
+from typing import Iterator
+
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -18,7 +20,7 @@ class OllamaClient:
         self.client = OpenAI(base_url=url, api_key=api_key)
         self.messages = messages
 
-    def ask_ia(self, prompt: str) -> str:
+    def ask_ia(self, prompt: str) -> Iterator[str]:
         self.messages.append(
             {
                 "role": "user",
@@ -30,9 +32,15 @@ class OllamaClient:
             temperature=0,
             max_completion_tokens=150,
             messages=self.messages,
+            stream=True,
         )
 
-        response_str = response_ai.choices[0].message.content or ""
+        response_str = ""
+        for chunk in response_ai:
+            token = chunk.choices[0].delta.content or ""
+            response_str += token
+            yield token
+
         self.messages.append(
             {
                 "role": "assistant",
@@ -40,4 +48,4 @@ class OllamaClient:
             }
         )
 
-        return response_str
+        # return response_str
