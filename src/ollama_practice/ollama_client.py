@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from openai import OpenAI
+from openai import APIConnectionError, APIStatusError, OpenAI, OpenAIError
 from openai.types.chat import ChatCompletionMessageParam
 
 
@@ -27,25 +27,35 @@ class OllamaClient:
                 "content": prompt
             }
         )
-        response_ai = self.client.chat.completions.create(
-            model=self.model,
-            temperature=0,
-            max_completion_tokens=150,
-            messages=self.messages,
-            stream=True,
-        )
+        try:
+            response_ai = self.client.chat.completions.create(
+                model=self.model,
+                temperature=0,
+                max_completion_tokens=150,
+                messages=self.messages,
+                stream=True,
+            )
 
-        response_str = ""
-        for chunk in response_ai:
-            token = chunk.choices[0].delta.content or ""
-            response_str += token
-            yield token
+            response_str = ""
+            for chunk in response_ai:
+                token = chunk.choices[0].delta.content or ""
+                response_str += token
+                yield token
 
-        self.messages.append(
-            {
-                "role": "assistant",
-                "content": response_str
-            }
-        )
+            self.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_str
+                }
+            )
+        except APIConnectionError:
+            self.messages.pop()
+            yield "❌ Error: No se pudo establecer conexión con el proveedor."
 
-        # return response_str
+        except APIStatusError as e:
+            self.messages.pop()
+            yield f"❌ Error del servicio ({e.status_code}): {e.message}"
+
+        except OpenAIError as e:
+            self.messages.pop()
+            yield f"❌ Error inesperado de la API: {e}"
