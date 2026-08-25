@@ -127,7 +127,7 @@ def main() -> None:
         },
     ]
 
-    client_ai = OllamaClient("llama3.2", messages)
+    client_ai = OllamaClient(messages)
 
     showBanner(console)
 

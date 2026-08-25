@@ -3,6 +3,8 @@ from typing import Iterator
 from openai import APIConnectionError, APIStatusError, OpenAI, OpenAIError
 from openai.types.chat import ChatCompletionMessageParam
 
+from ollama_practice.config import settings
+
 
 class OllamaClient:
     client: OpenAI
@@ -12,11 +14,11 @@ class OllamaClient:
 
     def __init__(
         self,
-        model: str,
         messages: list[ChatCompletionMessageParam],
-        max_context: int = 8,
-        url: str = "http://localhost:11434/v1",
-        api_key: str = "ollama",
+        model: str = settings.model,
+        max_context: int = settings.max_context,
+        url: str = settings.base_url,
+        api_key: str = settings.api_key,
     ) -> None:
         self.model = model
         self.client = OpenAI(base_url=url, api_key=api_key)
