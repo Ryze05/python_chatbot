@@ -1,3 +1,7 @@
+from datetime import datetime, timezone
+from pathlib import Path
+from textwrap import dedent
+
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -22,6 +26,7 @@ def showHelp(console: Console) -> None:
 
     table.add_row("/clear", "Limpia la memoria y reinicia la conversación")
     table.add_row("/history", "Muestra el historial completo de la sesión")
+    table.add_row("/save", "Exporta la conversación actual a un archivo .md")
     table.add_row("/help", "Muestra este menú de ayuda")
     table.add_row("exit", "Cierra el asistente y sale del programa")
 
@@ -43,6 +48,48 @@ def showBanner(console: Console) -> None:
             title="Ollama assistant",
             border_style="bold white",
         )
+    )
+
+
+def save_history(
+    console: Console,
+    history: list[ChatCompletionMessageParam]
+) -> None:
+    if not history:
+        console.print("[dim]No hay nada que guardar todavía.[/dim]")
+        return
+
+    path_history = Path("src/ollama_practice/history")
+
+    if not path_history.exists():
+        path_history.mkdir()
+
+    date_session = datetime.now(timezone.utc).strftime(
+        "%Y-%m-%d_%H-%M-%S.%f_UTC"
+    )
+
+    file_name = path_history / Path(f"asistente_mates_{date_session}.md")
+
+    data_file = dedent(f"""
+                # 👨‍🏫 Sesión con el Profesor de Matemáticas\n
+                **fecha:** {datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%d %H:%M:%S.%f_UTC"
+                )}
+                """).strip()
+
+    for i in history:
+        role = i.get("role")
+        content = i.get("content") or ""
+
+        if role == "user":
+            data_file += f"\n\n## 👤 Usuario\n\n{content}\n"
+        elif role == "assistant":
+            data_file += f"\n## 🤖 Profesor\n\n{content}\n---"
+
+    file_name.write_text(data_file, "utf-8")
+    console.print(
+        "[bold green]💾 Historial guardado con éxito en:[/bold green]"
+        f"[cyan]{file_name}[/cyan]"
     )
 
 
@@ -145,6 +192,10 @@ def main() -> None:
 
             if command == "/help":
                 showHelp(console)
+                continue
+
+            if command == "/save":
+                save_history(console, client_ai.full_history())
                 continue
 
             console.print("\n[bold green]Profesor:[/bold green]")
