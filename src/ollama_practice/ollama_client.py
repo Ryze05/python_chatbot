@@ -8,28 +8,28 @@ class OllamaClient:
     client: OpenAI
     messages: list[ChatCompletionMessageParam]
     model: str
-    max_history: int
+    max_context: int
 
     def __init__(
         self,
         model: str,
         messages: list[ChatCompletionMessageParam],
-        max_history: int = 8,
+        max_context: int = 8,
         url: str = "http://localhost:11434/v1",
         api_key: str = "ollama",
     ) -> None:
         self.model = model
         self.client = OpenAI(base_url=url, api_key=api_key)
         self.messages = messages
-        self.max_history = max_history
+        self.max_context = max_context
 
-    def window_context(self):
-        if len(self.messages) <= self.max_history + 1:
-            return
+    def window_context(self) -> list[ChatCompletionMessageParam]:
+        if len(self.messages) <= self.max_context + 1:
+            return self.messages
 
         system_msg = self.messages[0]
         messages = self.messages[1:]
-        self.messages = [system_msg] + messages[-self.max_history:]
+        return [system_msg] + messages[-self.max_context:]
 
     def ask_ia(self, prompt: str) -> Iterator[str]:
         self.messages.append(
@@ -39,14 +39,14 @@ class OllamaClient:
             }
         )
 
-        self.window_context()
+        context = self.window_context()
 
         try:
             response_ai = self.client.chat.completions.create(
                 model=self.model,
                 temperature=0,
                 max_completion_tokens=150,
-                messages=self.messages,
+                messages=context,
                 stream=True,
             )
 
@@ -62,6 +62,7 @@ class OllamaClient:
                     "content": response_str
                 }
             )
+
         except APIConnectionError:
             self.messages.pop()
             yield "❌ Error: No se pudo establecer conexión con el proveedor."
@@ -73,3 +74,9 @@ class OllamaClient:
         except OpenAIError as e:
             self.messages.pop()
             yield f"❌ Error inesperado de la API: {e}"
+
+    def clear_context(self) -> None:
+        self.messages = [self.messages[0]]
+
+    def full_history(self) -> list[ChatCompletionMessageParam]:
+        return self.messages[1:]

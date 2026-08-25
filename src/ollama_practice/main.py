@@ -38,19 +38,52 @@ def main() -> None:
 
     client_ai = OllamaClient("llama3.2", messages)
 
+    print("═════════════════════════════════════════════")
+    print("       🤖 Asistente de Matemáticas 👨‍🏫        ")
+    print(" Comandos: /clear, /history, /help, exit")
+    print("═════════════════════════════════════════════\n")
+
     while True:
-        user_input = input("\nDime que necesitas (usa 0 para salir):\n> ")
+        try:
+            user_input = input("\nDime que necesitas:\n> ").lower()
 
-        if user_input.strip() == "0":
-            print("Hasta pronto 😁")
+            if user_input.strip() in ("0", "salir", "exit"):
+                print("Hasta pronto 😁")
+                break
+
+            if user_input.strip() == "/clear":
+                client_ai.clear_context()
+                continue
+
+            if user_input.strip() == "/history":
+                history = client_ai.full_history()
+                print("\n📔 --- Historial de conversación ---")
+                for i in history:
+                    role = i.get("role")
+                    content = i.get("content") or ""
+                    if role == "user":
+                        print(f"\n👤 Tú:\n{content}")
+                    elif role == "assistant":
+                        print(f"\n🤖 Asistente:\n{content}")
+                continue
+
+            if user_input.strip() == "/help":
+                print("\n📎 Comandos disponibles:")
+                print("  /clear    -> Limpia y reinicia la memoria")
+                print("  /history  -> Muestra el historial de la sesión")
+                print("  /help     -> Muestra este menú de ayuda")
+                print("  exit      -> Cierra la aplicación\n")
+                continue
+
+            print("\nChat:\n", end="", flush=True)
+
+            for token in client_ai.ask_ia(user_input):
+                print(token, end="", flush=True)
+
+            print()
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Sesión cancelada. ¡Hasta pronto!")
             break
-
-        print("\nChat:\n", end="", flush=True)
-
-        for token in client_ai.ask_ia(user_input):
-            print(token, end="", flush=True)
-
-        print()
 
 
 if __name__ == "__main__":
