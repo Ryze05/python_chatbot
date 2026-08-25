@@ -1,5 +1,8 @@
 from rich.console import Console
+from rich.live import Live
+from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
 
@@ -51,32 +54,30 @@ def main() -> None:
             "role": "system",
             "content": (
                 "Eres un profesor de matemáticas. "
-                "Sigue estas reglas en este orden de prioridad: "
+                "Sigue estas reglas en este orden de prioridad:\n"
                 "1. Si el usuario saluda, salúdalo cordialmente y pregúntale "
-                "en qué problema de matemáticas necesita ayuda. "
-                "2. Si el usuario pregunta quién eres, cómo te llamas o "
-                "qué eres, responde de forma cordial especificando que eres "
-                "un profesor de matemáticas. Seguido de eso, pregúntale "
-                "en qué problema de matemáticas necesita ayuda. "
+                "en qué problema de matemáticas necesita ayuda.\n"
+                "2. Si el usuario pregunta quién eres, especifica que eres "
+                "un profesor de matemáticas.\n"
                 "3. Para cualquier otra pregunta, responde únicamente si es "
-                "una pregunta de matemáticas. Si no es una pregunta de "
-                "matemáticas, responde exactamente: Lo sentimos, este modelo "
-                "solo responde a preguntas de mates"
+                "de matemáticas. Si no lo es, responde exactamente: Lo "
+                "sentimos este modelo solo responde a preguntas de mates.\n\n"
+                "IMPORTANTE SOBRE EL FORMATO:\n"
+                "- Responde SIEMPRE estructurando tus explicaciones en "
+                "Markdown enriquecido.\n"
+                "- Usa títulos (##, ###), negritas para destacar conceptos "
+                "clave y listas con viñetas (-) para pasos.\n"
+                "- Si muestras fórmulas o código de apoyo, mételos en bloques "
+                "de código con sintaxis resaltada (```python ... ```).\n\n"
+                "Ejemplos de comportamiento esperado:\n"
+                "Usuario: Quien descubrió américa\n"
+                "Asistente: Lo sentimos, este modelo solo responde a "
+                "preguntas de mates\n\n"
+                "Usuario: Calcula cuanto es 25*4\n"
+                "Asistente: ## Cálculo de Multiplicación\n\nEl resultado "
+                "de **25 × 4** es:\n- **Total:** `100`"
             ),
         },
-        {"role": "user", "content": "Quien descubrió américa"},
-        {
-            "role": "assistant",
-            "content": (
-                "Lo sentimos, este modelo solo responde "
-                "a preguntas de mates"
-            ),
-        },
-        {"role": "user", "content": "Calcula cuanto es 25*4"},
-        {
-            "role": "assistant",
-            "content": "El resultado de 25 * 4 es 100.",
-        }
     ]
 
     client_ai = OllamaClient("llama3.2", messages)
@@ -85,40 +86,84 @@ def main() -> None:
 
     while True:
         try:
-            user_input = input("\nDime que necesitas:\n> ").lower()
+            user_input = Prompt.ask("\n[bold cyan]Tú[/bold cyan]").strip()
 
-            if user_input.strip() in ("0", "salir", "exit"):
-                print("Hasta pronto 😁")
-                break
-
-            if user_input.strip() == "/clear":
-                client_ai.clear_context()
+            if not user_input:
                 continue
 
-            if user_input.strip() == "/history":
+            command = user_input.lower()
+
+            if command in ("0", "salir", "exit"):
+                console.print("[bold cyan]¡Hasta pronto! 👋[/bold cyan]\n")
+                break
+
+            if command == "/clear":
+                client_ai.clear_context()
+                console.print(
+                    "[bold green]🧹 Historial reiniciado "
+                    "correctamente.[/bold green]"
+                )
+                continue
+
+            if command == "/history":
                 history = client_ai.full_history()
-                print("\n📔 --- Historial de conversación ---")
+                if not history:
+                    console.print(
+                        "[dim]No hay mensajes en "
+                        "el historial aún.[/dim]"
+                    )
+                    continue
+
+                console.print(
+                    "\n[bold underline]📔 Historial de "
+                    "conversación:[/bold underline]\n",
+                    justify="center"
+                )
+
                 for i in history:
                     role = i.get("role")
                     content = i.get("content") or ""
                     if role == "user":
-                        print(f"\n👤 Tú:\n{content}")
+                        console.print(
+                            Panel(
+                                renderable=f"{content}",
+                                title="👤 Tú",
+                                border_style="yellow"
+                            )
+                        )
                     elif role == "assistant":
-                        print(f"\n🤖 Asistente:\n{content}")
+                        console.print(
+                            Panel(
+                                Markdown(f"{content}"),
+                                title="🤖 Profesor",
+                                border_style="green"
+                            )
+                        )
+                    elif role == "system":
+                        continue
                 continue
 
-            if user_input.strip() == "/help":
+            if command == "/help":
                 showHelp(console)
                 continue
 
-            print("\nChat:\n", end="", flush=True)
+            console.print("\n[bold green]Profesor:[/bold green]")
 
-            for token in client_ai.ask_ia(user_input):
-                print(token, end="", flush=True)
+            full_response = ""
 
-            print()
+            with Live(
+                Markdown(""),
+                refresh_per_second=15,
+                console=console
+            ) as live:
+                for token in client_ai.ask_ia(user_input):
+                    full_response += token
+                    live.update(Markdown(full_response))
         except KeyboardInterrupt:
-            print("\n\n⚠️  Sesión cancelada. ¡Hasta pronto!")
+            console.print(
+                "\n\n[bold red]⚠️  Sesión finalizada con Ctrl+C."
+                "¡Hasta la próxima![/bold red]\n"
+            )
             break
 
 
