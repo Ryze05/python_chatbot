@@ -37,7 +37,7 @@ class OllamaClient:
         self.messages.append(
             {
                 "role": "user",
-                "content": prompt
+                "content": f"<mensaje_usuario>{prompt}</mensaje_usuario>"
             }
         )
 
